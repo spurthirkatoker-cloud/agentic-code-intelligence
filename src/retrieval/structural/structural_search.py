@@ -16,7 +16,7 @@ class StructuralRetriever:
         }
         
         lower_query = query.lower()
-        words = re.split(r'\W+', lower_query)
+        words = [w for w in re.split(r'\W+', lower_query) if w]
         
         for i, word in enumerate(words):
             if word in ("calls", "calling", "uses", "using", "invokes"):
@@ -32,17 +32,18 @@ class StructuralRetriever:
                     hints["imports"].append(words[i+1])
                     
             if word in ("function", "method", "def", "implement"):
+                if i > 0:
+                    hints["names"].append(words[i-1])
                 if i + 1 < len(words):
                     hints["names"].append(words[i+1])
                     
-        # Blindly match meaningful tokens as fallback heuristics against the graph
-        for w in words:
-            if len(w) > 3:
-                hints["calls"].append(w)
-                hints["names"].append(w)
-                hints["classes"].append(w)
-                hints["imports"].append(w)
-                
+        # Allow isolated action keywords (often passed by QueryExpander) to match structurally
+        if len(words) == 1 and len(words[0]) > 3:
+            hints["names"].append(words[0])
+            hints["calls"].append(words[0])
+            hints["classes"].append(words[0])
+            hints["imports"].append(words[0])
+            
         return hints
         
     def search(self, query: str, top_k: int = 50) -> List[Dict[str, Any]]:

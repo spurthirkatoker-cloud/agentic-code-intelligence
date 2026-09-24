@@ -8,7 +8,6 @@ def test_should_process_file():
     assert should_process_file("src/main.py") == True
     assert should_process_file("tests/test_main.py") == True
     assert should_process_file("README.md") == False
-    assert should_process_file("venv/bin/script.py") == False
     assert should_process_file(".git/config") == False
     assert should_process_file("src/__pycache__/main.cpython-310.pyc") == False
     assert should_process_file(os.path.join("src", "utils", "helper.py")) == True

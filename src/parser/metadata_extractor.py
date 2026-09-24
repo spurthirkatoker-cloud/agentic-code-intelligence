@@ -10,6 +10,8 @@ def extract_metadata(chunk: Dict[str, Any], repository_id: str, git_commit: str 
         "chunk_type": chunk["chunk_type"],
         "class_name": chunk.get("parent_class") if chunk["chunk_type"] == "method" else (chunk["name"] if chunk["chunk_type"] == "class" else None),
         "function_name": chunk["name"] if chunk["chunk_type"] in ("function", "method") else None,
+        "name": chunk.get("name"),
+        "calls": chunk.get("calls", []),
         "start_line": chunk["start_line"],
         "end_line": chunk["end_line"],
         "imports": chunk.get("imports", []),

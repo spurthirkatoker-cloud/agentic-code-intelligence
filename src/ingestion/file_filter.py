@@ -1,20 +1,18 @@
 import os
 
 SUPPORTED_EXTENSIONS = {".py"}
-IGNORED_DIRS = {".git", "node_modules", "venv", ".venv", "__pycache__", "build", "env", "dist"}
+IGNORED_DIRS = {".git", "node_modules", "venv", ".venv", "__pycache__", "build", "env", "dist", "tests"}
 
 def should_process_file(file_path: str) -> bool:
-    """Determine if a file should be processed based on extension and path."""
+    """Determine if a file should be processed based on extension."""
     _, ext = os.path.splitext(file_path)
     if ext not in SUPPORTED_EXTENSIONS:
         return False
         
-    # Check if any parent directory is in IGNORED_DIRS or is hidden
-    normalized_path = file_path.replace("\\", "/")
-    parts = normalized_path.split("/")
-    
-    for part in parts[:-1]: # exclude the file name itself
-        if part in IGNORED_DIRS or part.startswith("."):
-            return False
-            
+    # The repository scanner already prunes ignored and hidden directories via os.walk dirs injection.
+    # We only need to guarantee the specific file itself isn't hidden.
+    file_name = os.path.basename(file_path)
+    if file_name.startswith("."):
+        return False
+        
     return True

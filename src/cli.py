@@ -20,17 +20,35 @@ from src.search.search_service import SearchService
 
 def init_service() -> SearchService:
     """Safely instantiates the CPU-bound Neural Engine for local terminal usage."""
-    db_path = os.environ.get("DATABASE_PATH", "demo_scratch.db")
-    store = MetadataStore(db_path)
+    from src.versioning.git_manager import GitManager
+    from src.versioning.versioned_index import VersionedIndexManager
+    
+    repo_path = os.getcwd()
+    git_manager = GitManager(repo_path)
+    version_info = git_manager.get_current_version_info()
+    commit_hash = version_info.get("commit_hash", "unknown")
+    
+    index_manager = VersionedIndexManager()
+    paths = index_manager.get_paths(commit_hash)
+    
+    if not os.path.exists(paths["faiss_index_path"]):
+        print(f"⚠️ Retrieval indexes for the current repository commit ({commit_hash}) were not found.")
+        print("Please initialize your local intelligence cache by running: python -m src.indexing.builder")
+        sys.exit(1)
+        
+    store = MetadataStore(paths["metadata_db_path"])
     
     embedder = Embedder()
     dense_idx = DenseIndex(384)
+    dense_idx.load(paths["faiss_index_path"], paths["faiss_index_path"] + ".mapping")
     dense_retriever = DenseRetriever(embedder, dense_idx)
     
     bm25_idx = BM25Index()
+    bm25_idx.load(paths["bm25_index_path"])
     bm25_retriever = BM25Retriever(bm25_idx)
     
     struct_idx = StructuralIndex()
+    struct_idx.load(paths["structural_index_path"])
     struct_retriever = StructuralRetriever(struct_idx)
     
     expander = QueryExpander()

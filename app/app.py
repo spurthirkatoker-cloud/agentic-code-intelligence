@@ -2,9 +2,16 @@ import streamlit as st
 import time
 import os
 import sys
+from typing import Optional
 
 # Ensure the root 'src' directory is inside the Python path so Streamlit can locate our modules natively
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(repo_root)
+
+# Force-inject the local virtual environment packages just in case the user's IDE terminal is routing to a global Python
+venv_path = os.path.join(repo_root, ".venv", "Lib", "site-packages")
+if os.path.exists(venv_path) and venv_path not in sys.path:
+    sys.path.insert(0, venv_path)
 
 from src.retrieval.expansion.query_expander import QueryExpander
 from src.retrieval.expansion.orchestrator import RetrievalOrchestrator
@@ -20,24 +27,41 @@ from src.retrieval.fusion.cross_encoder import CrossEncoderReRanker
 from src.storage.metadata_store import MetadataStore
 from src.retrieval.pipeline import RetrievalPipeline
 from src.search.search_service import SearchService
+from src.versioning.git_manager import GitManager
+from src.versioning.versioned_index import VersionedIndexManager
 
 # ---------------------------------------------------------
 # CPU-Bound Singleton Initialization of Core Architecture
 # ---------------------------------------------------------
 @st.cache_resource
-def init_search_service() -> SearchService:
-    # Safely point to an isolated DB; for MVP demo, defaults to memory/scratch
-    db_path = os.environ.get("DATABASE_PATH", "demo_scratch.db")
-    store = MetadataStore(db_path)
+def init_search_service() -> Optional[SearchService]:
+    """Safely initializes the Neural Pipeline by dynamically binding to Version-Isolated persistence paths."""
+    repo_path = os.getcwd()
+    git_manager = GitManager(repo_path)
+    version_info = git_manager.get_current_version_info()
+    commit_hash = version_info.get("commit_hash", "unknown")
+    
+    index_manager = VersionedIndexManager()
+    paths = index_manager.get_paths(commit_hash)
+    
+    # Fail cleanly if the isolated FAISS database doesn't exist for this commit
+    if not os.path.exists(paths["faiss_index_path"]):
+        return None
+        
+    store = MetadataStore(paths["metadata_db_path"])
     
     embedder = Embedder()
     dense_idx = DenseIndex(384)
+    # Correctly load both FAISS and its mathematical chunk_id mapping
+    dense_idx.load(paths["faiss_index_path"], paths["faiss_index_path"] + ".mapping")
     dense_retriever = DenseRetriever(embedder, dense_idx)
     
     bm25_idx = BM25Index()
+    bm25_idx.load(paths["bm25_index_path"])
     bm25_retriever = BM25Retriever(bm25_idx)
     
     struct_idx = StructuralIndex()
+    struct_idx.load(paths["structural_index_path"])
     struct_retriever = StructuralRetriever(struct_idx)
     
     expander = QueryExpander()
@@ -62,6 +86,10 @@ st.set_page_config(page_title="CodeLens AI", layout="wide")
 
 st.title("CodeLens AI")
 st.subheader("Agentic Code Intelligence: Find the right code, faster.")
+
+if not search_service:
+    st.error("⚠️ **Retrieval indexes for the current repository commit were not found.**\n\nPlease initialize your local intelligence cache by running the indexing script in your terminal:\n\n`python -m src.indexing.builder`")
+    st.stop()
 
 st.info("**Retrieval Flow Architecture:**\n\n`Dense Top-50 + BM25 Top-50 + Structural Top-50 → RRF Top-30 → Cross-Encoder Top-10`")
 
