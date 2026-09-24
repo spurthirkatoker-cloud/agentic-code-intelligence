@@ -1,0 +1,11 @@
+tree-sitter
+tree-sitter-python
+sentence-transformers
+faiss-cpu
+rank-bm25
+numpy
+pandas
+scikit-learn
+mteb
+datasets
+streamlit

@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+.pytest_cache/
+
+# Environments
+.venv/
+venv/
+env/
+
+# Data, Models, Indexes
+models/
+large model files
+indexes/
+FAISS indexes
+BM25 serialized indexes
+SQLite runtime databases
+*.db
+datasets
+data/
+evaluation/results/
+
+# Secrets
+.env
+secrets
+API keys
+personal credentials
