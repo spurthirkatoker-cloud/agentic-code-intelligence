@@ -1,1 +1,2 @@
 from .dataset_loader import EvaluationDatasetLoader
+from .evaluate_retrieval import RetrievalEvaluator
