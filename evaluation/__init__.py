@@ -1,3 +1,4 @@
 from .dataset_loader import EvaluationDatasetLoader
 from .evaluate_retrieval import RetrievalEvaluator
 from .benchmark_latency import LatencyBenchmark
+from .benchmark_indexing import IndexingBenchmark
